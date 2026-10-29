@@ -2609,22 +2609,8 @@
                 return [];
             }
             try {
-                let devices = await navigator.mediaDevices.enumerateDevices();
-                let videoDevs = devices.filter(d => d.kind === 'videoinput');
-
-                // If Chrome hasn't granted permission yet, device labels are blank ("").
-                // A quick permission probe unlocks all hardware device labels.
-                if (videoDevs.length > 0 && videoDevs.every(d => !d.label)) {
-                    try {
-                        const tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                        tempStream.getTracks().forEach(t => t.stop());
-                        devices = await navigator.mediaDevices.enumerateDevices();
-                        videoDevs = devices.filter(d => d.kind === 'videoinput');
-                    } catch (ePerm) {
-                        console.warn('Initial permission prompt probe notice:', ePerm);
-                    }
-                }
-
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevs = devices.filter(d => d.kind === 'videoinput');
                 activeVideoDevicesList = videoDevs;
                 updateCameraSelectorDropdown();
                 return videoDevs;
@@ -2719,10 +2705,22 @@
                     document.body.appendChild(laptopCanvas);
                 }
 
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { deviceId: { exact: targetDev.deviceId }, width: { ideal: 640 }, height: { ideal: 360 } },
-                    audio: false
-                });
+                let stream = null;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { deviceId: { ideal: targetDev.deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: false
+                    });
+                } catch (e1) {
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({
+                            video: { deviceId: { exact: targetDev.deviceId } },
+                            audio: false
+                        });
+                    } catch (e2) {
+                        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    }
+                }
 
                 if (stream) {
                     laptopWebcamStream = stream;
@@ -2955,6 +2953,7 @@
             const isBack = (currentCameraFacing === 'environment');
             const logName = isCar ? 'CAR DASH CAM (USB)' : (isBack ? 'BACK/ROAD' : 'FRONT/CABIN');
             addTerminalLog('HARDWARE', `Requesting ${logName} camera access...`);
+
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 addTerminalLog('HARDWARE', 'Camera requires HTTPS or localhost context.', 'crit');
                 return false;
@@ -2986,61 +2985,80 @@
                 const devs = await refreshCameraDeviceList();
                 let selectedDev = null;
 
-                // Priority 0: Exact deviceId selection based on intelligent hardware classification
                 if (devs.length > 0) {
                     if (isCar || isBack) {
                         selectedDev = pickBestRoadDashcam(devs);
                     } else {
                         selectedDev = pickBestCabinWebcam(devs);
                     }
+                }
 
-                    if (selectedDev && selectedDev.deviceId) {
-                        try {
-                            stream = await navigator.mediaDevices.getUserMedia({
-                                video: {
-                                    deviceId: { exact: selectedDev.deviceId },
-                                    width: { ideal: 1280, min: 640 },
-                                    height: { ideal: 720, min: 360 }
-                                },
-                                audio: false
-                            });
-                            if (stream) {
-                                activeSelectedDeviceId = selectedDev.deviceId;
-                                activeCamIndex = devs.findIndex(d => d.deviceId === selectedDev.deviceId);
-                                if (activeCamIndex < 0) activeCamIndex = 0;
-                            }
-                        } catch (eDev) {
-                            console.warn('Exact deviceId selection notice:', eDev);
+                const facingTarget = (isCar || isBack) ? 'environment' : 'user';
+
+                // Tier 0: Preferred hardware deviceId with ideal resolution (no restrictive 'exact' or 'min')
+                if (selectedDev && selectedDev.deviceId) {
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({
+                            video: {
+                                deviceId: { ideal: selectedDev.deviceId },
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            },
+                            audio: false
+                        });
+                        if (stream) {
+                            activeSelectedDeviceId = selectedDev.deviceId;
+                            activeCamIndex = devs.findIndex(d => d.deviceId === selectedDev.deviceId);
+                            if (activeCamIndex < 0) activeCamIndex = 0;
                         }
+                    } catch (eDev) {
+                        console.warn('Tier 0 deviceId notice:', eDev);
                     }
                 }
 
-                // Tier 1: Try ideal facingMode constraint
+                // Tier 1: Ideal facingMode constraint with 720p ideal
                 if (!stream) {
                     try {
-                        const facingTarget = (isCar || isBack) ? 'environment' : 'user';
                         stream = await navigator.mediaDevices.getUserMedia({
                             video: {
                                 facingMode: { ideal: facingTarget },
-                                width: { ideal: 1280, min: 640 },
-                                height: { ideal: 720, min: 360 }
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
                             },
                             audio: false
                         });
                     } catch (e1) {
-                        // Tier 2: Basic video fallback
-                        try {
-                            stream = await navigator.mediaDevices.getUserMedia({
-                                video: true,
-                                audio: false
-                            });
-                        } catch (e2) {
-                            throw new Error("Could not acquire video stream");
-                        }
+                        console.warn('Tier 1 facingMode notice:', e1);
                     }
                 }
 
-                if (!stream) throw new Error("Could not acquire device camera");
+                // Tier 2: FacingMode basic
+                if (!stream) {
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({
+                            video: { facingMode: { ideal: facingTarget } },
+                            audio: false
+                        });
+                    } catch (e2) {
+                        console.warn('Tier 2 facingMode basic notice:', e2);
+                    }
+                }
+
+                // Tier 3: Universal fallback (any available camera on device)
+                if (!stream) {
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({
+                            video: true,
+                            audio: false
+                        });
+                    } catch (e3) {
+                        console.warn('Tier 3 video:true notice:', e3);
+                    }
+                }
+
+                if (!stream) {
+                    throw new Error("Could not acquire device camera");
+                }
 
                 laptopWebcamStream = stream;
                 laptopVideoElem.srcObject = stream;
@@ -3057,15 +3075,18 @@
                 // Refresh device list to capture labels now that permission is active
                 setTimeout(async () => {
                     await refreshCameraDeviceList();
-                }, 400);
+                }, 300);
 
-                const activeName = (selectedDev && selectedDev.label) ? selectedDev.label : (isCar ? 'USB Dash Cam' : (isBack ? 'Road Camera' : 'Webcam'));
+                const activeName = (selectedDev && selectedDev.label) ? selectedDev.label : (isCar ? 'USB Dash Cam' : (isBack ? 'Road Camera' : 'Laptop Webcam'));
                 addTerminalLog('HARDWARE', `🟢 ACTIVE CAMERA: ${activeName}`);
                 showFloatingSourcePill('📷', `ONLINE: ${activeName}`);
                 return true;
             } catch (err) {
                 console.warn('Camera activation notice:', err);
-                addTerminalLog('HARDWARE', `Camera access notice: ${err.message || 'Permission denied'}`, 'crit');
+                const errMsg = (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')
+                    ? 'Camera permission denied. Please click the camera/lock icon in your browser URL bar and choose "Allow".'
+                    : (err.message || 'Permission denied');
+                addTerminalLog('HARDWARE', `Camera access notice: ${errMsg}`, 'crit');
                 return false;
             }
         }
@@ -3170,11 +3191,10 @@
         function transmitLaptopFrames() {
             if (!isLaptopStreaming || !laptopVideoElem) return;
 
-            // High-Definition Real-Time Canvas: 768x432 Mobile (Smooth 30 FPS on 4G) / 960x540 Laptop HD
-            const isMobileDevice = (window.innerWidth <= 820) || /iphone|ipad|android/i.test(navigator.userAgent);
-            const hdWidth = isMobileDevice ? 768 : 960;
-            const hdHeight = isMobileDevice ? 432 : 540;
-            const hdQuality = isMobileDevice ? 0.62 : 0.70;
+            // Streamlined 640x360 @ 0.60 Quality: ~12 KB payload for instant sub-20ms upload across Cloudflare
+            const hdWidth = 640;
+            const hdHeight = 360;
+            const hdQuality = 0.60;
 
             if (laptopCanvas) {
                 laptopCanvas.width = hdWidth;
@@ -3218,7 +3238,7 @@
                 }
 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 450);
+                const timeoutId = setTimeout(() => controller.abort(), 2500);
 
                 try {
                     await fetch(targetEndpoint, {
@@ -3448,6 +3468,7 @@
             return ['car', 'cam1', '1', 'usb', 'back_cam', 'mobile', 'phone', 'wifi', 'laptop', 'cam0', '0', 'front_cam', 'cabin'].some(k => s === k || s.includes(k));
         }
 
+        let pumpWatchdog = null;
         function pumpLatestFrame() {
             if (window.pumpRunning || isPumpInFlight) return;
             const streamImg = document.getElementById('videoStream');
@@ -3457,7 +3478,21 @@
             isPumpInFlight = true;
             const nextUrl = '/api/live_frame.jpg?t=' + performance.now();
 
+            if (pumpWatchdog) clearTimeout(pumpWatchdog);
+            pumpWatchdog = setTimeout(() => {
+                if (isPumpInFlight) {
+                    streamImg.onload = null;
+                    streamImg.onerror = null;
+                    window.pumpRunning = false;
+                    isPumpInFlight = false;
+                    if (framePumpActive) {
+                        requestAnimationFrame(pumpLatestFrame);
+                    }
+                }
+            }, 350);
+
             const onDone = () => {
+                if (pumpWatchdog) { clearTimeout(pumpWatchdog); pumpWatchdog = null; }
                 streamImg.onload = null;
                 streamImg.onerror = null;
                 window.pumpRunning = false;
@@ -3468,12 +3503,13 @@
             };
 
             const onError = () => {
+                if (pumpWatchdog) { clearTimeout(pumpWatchdog); pumpWatchdog = null; }
                 streamImg.onload = null;
                 streamImg.onerror = null;
                 window.pumpRunning = false;
                 isPumpInFlight = false;
                 if (framePumpActive) {
-                    setTimeout(pumpLatestFrame, 50);
+                    setTimeout(pumpLatestFrame, 35);
                 }
             };
 

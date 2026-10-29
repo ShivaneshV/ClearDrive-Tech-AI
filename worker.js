@@ -33,12 +33,31 @@ export default {
       reqInit.duplex = "half";
     }
 
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, X-Timestamp, Authorization, Cache-Control, Pragma, Expires",
+          "Access-Control-Max-Age": "86400"
+        }
+      });
+    }
+
     try {
       const response = await fetch(targetUrl.toString(), reqInit);
       if (response.status >= 500 || response.status === 530) {
         throw new Error("Backend offline");
       }
-      return response;
+      const newRespHeaders = new Headers(response.headers);
+      newRespHeaders.set("Access-Control-Allow-Origin", "*");
+      newRespHeaders.set("Permissions-Policy", "camera=*, microphone=*");
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newRespHeaders
+      });
     } catch (err) {
       const html = `<!DOCTYPE html>
 <html lang="en">
