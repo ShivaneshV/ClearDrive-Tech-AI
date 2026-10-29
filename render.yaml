@@ -1,9 +1,6 @@
-﻿services:
+services:
   - type: web
-    name: cleardrive-ai
-    env: docker
-    plan: free
-    dockerfilePath: ./Dockerfile
-    envVars:
-      - key: PORT
-        value: 5000
+    name: ClearDrive-Tech-AI
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py

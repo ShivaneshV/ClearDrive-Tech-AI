@@ -879,25 +879,22 @@ def process_video():
                 crop_y = int(h_c * 0.24)
                 raw_frame = cv2.resize(raw_frame[crop_y:, :], (w_c, h_c), interpolation=cv2.INTER_CUBIC)
 
-        # Frame Processing Resolution: Standardized 16:9 True HD (1280x720) for demo videos, fast 640x360 for live cameras
+        # Check cloud execution environment (Render, Hugging Face, etc.)
+        is_cloud_env = os.environ.get("RENDER") is not None or os.environ.get("PORT") is not None
+
+        # Frame Processing Resolution: Standardized 16:9 True HD (1280x720) locally, fast 640x360 on cloud (Render 0.1 CPU)
         is_live_cam_source = src in ['laptop', 'cam0', '0', 'phone', 'mobile', 'car', 'cam1', '1']
         h_raw, w_raw = raw_frame.shape[:2]
-        if is_live_cam_source:
-            if w_raw == 640 and h_raw == 360:
-                frame = raw_frame
-            elif w_raw > 0 and h_raw > 0:
-                frame = cv2.resize(raw_frame, (640, 360), interpolation=cv2.INTER_LINEAR)
-            else:
-                frame = raw_frame
+
+        target_w = 640 if (is_live_cam_source or is_cloud_env) else 1280
+        target_h = 360 if (is_live_cam_source or is_cloud_env) else 720
+
+        if w_raw == target_w and h_raw == target_h:
+            frame = raw_frame
+        elif w_raw > 0 and h_raw > 0:
+            frame = cv2.resize(raw_frame, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
         else:
-            if w_raw == 1280 and h_raw == 720:
-                frame = raw_frame
-            elif w_raw > 1280 and h_raw > 720:
-                frame = cv2.resize(raw_frame, (1280, 720), interpolation=cv2.INTER_AREA)
-            elif w_raw > 0 and h_raw > 0:
-                frame = cv2.resize(raw_frame, (1280, 720), interpolation=cv2.INTER_LINEAR)
-            else:
-                frame = raw_frame
+            frame = raw_frame
 
         # Run Next-Gen Omni-Vision Predictive ADAS Pipeline
         active_video_source = src if src in ['laptop', 'cam0', '0', 'phone', 'mobile', 'car', 'cam1', '1'] else current_video_file
@@ -940,27 +937,26 @@ def process_video():
 
         v2v_status_str = f"{active_v2v_payload['event']} ({active_v2v_payload['distance']})" if active_v2v_payload else "V2V MESH ACTIVE // LISTENING"
 
-        # Encode JPEG: fast 640x360 @ quality 75 for live cameras; cloud-optimized 960x540 @ quality 72 for demo videos (~24 KB vs ~142 KB -> 83% bandwidth cut, sub-50ms cloud latency)
-        if is_live_cam_source:
-            h_out, w_out = dashboard_frame.shape[:2]
-            if w_out != 640 or h_out != 360:
-                out_frame = cv2.resize(dashboard_frame, (640, 360), interpolation=cv2.INTER_LINEAR)
-            else:
-                out_frame = dashboard_frame
-            ret_enc, buf_enc = cv2.imencode('.jpg', out_frame, [
-                int(cv2.IMWRITE_JPEG_QUALITY), 75,
-                int(cv2.IMWRITE_JPEG_OPTIMIZE), 0
-            ])
+        # Encode JPEG: fast 640x360 @ quality 65 on cloud (~15 KB payload, zero bandwidth lag over transatlantic connections!)
+        out_w = 640 if (is_live_cam_source or is_cloud_env) else 960
+        out_h = 360 if (is_live_cam_source or is_cloud_env) else 540
+        out_q = 65 if is_cloud_env else (75 if is_live_cam_source else 72)
+
+        h_out, w_out = dashboard_frame.shape[:2]
+        if w_out != out_w or h_out != out_h:
+            out_frame = cv2.resize(dashboard_frame, (out_w, out_h), interpolation=cv2.INTER_LINEAR)
         else:
-            h_out, w_out = dashboard_frame.shape[:2]
-            if w_out != 960 or h_out != 540:
-                out_frame = cv2.resize(dashboard_frame, (960, 540), interpolation=cv2.INTER_AREA if w_out > 960 else cv2.INTER_LINEAR)
-            else:
-                out_frame = dashboard_frame
-            ret_enc, buf_enc = cv2.imencode('.jpg', out_frame, [
-                int(cv2.IMWRITE_JPEG_QUALITY), 72,
-                int(cv2.IMWRITE_JPEG_OPTIMIZE), 0
-            ])
+            out_frame = dashboard_frame
+
+        ret_enc, buf_enc = cv2.imencode('.jpg', out_frame, [
+            int(cv2.IMWRITE_JPEG_QUALITY), out_q,
+            int(cv2.IMWRITE_JPEG_OPTIMIZE), 0
+        ])
+
+        # Precise 30 FPS frame pacing on cloud to prevent 0.1 CPU starvation
+        elapsed = time.time() - start_process
+        if is_cloud_env and not is_live_cam_source and elapsed < 0.033:
+            time.sleep(0.033 - elapsed)
 
         # Update Live Telemetry & Notify Waiting Stream Clients
         with frame_condition:
