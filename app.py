@@ -469,6 +469,15 @@ class ThreadedCamera:
 
             is_video_file = isinstance(self.src, str) and (self.src.endswith(('.mp4', '.avi', '.mov', '.mkv')) or os.path.exists(self.src))
             if not is_video_file:
+                # If camera has not been requested for > 2.5s, release hardware handle to turn off physical camera LED
+                if not self.need_decode and (time.time() - self.last_frame_time > 2.5):
+                    if self.cap is not None:
+                        try: self.cap.release()
+                        except Exception: pass
+                        self.cap = None
+                    time.sleep(0.1)
+                    continue
+
                 # Live hardware camera: tight zero-sleep grab loop constantly draining the Windows DirectShow driver FIFO
                 grabbed = self.cap.grab()
                 if not grabbed:
@@ -538,6 +547,18 @@ active_hw_cameras = {}
 hw_cam_lock = threading.Lock()
 
 
+def release_all_hw_cameras():
+    """Immediately terminates and releases all OpenCV hardware webcam handles, turning off camera LEDs."""
+    global active_hw_cameras
+    with hw_cam_lock:
+        for idx, cam in list(active_hw_cameras.items()):
+            try:
+                cam.release()
+            except Exception:
+                pass
+        active_hw_cameras.clear()
+
+
 def get_threaded_cam(idx):
     with hw_cam_lock:
         if idx not in active_hw_cameras:
@@ -599,6 +620,8 @@ def process_video():
             last_phone_seq = -1
             last_laptop_seq = -1
             last_browser_laptop_seq = -1
+            if current_source not in ['laptop', 'cam0', '0', 'car', 'cam1', '1', 'phone', 'mobile']:
+                release_all_hw_cameras()
 
         with lock:
             src = current_source
@@ -1417,7 +1440,25 @@ def update_settings():
                 force_traction_demo = True
 
         if 'source' in data and data['source']:
-            new_src = str(data['source'])
+            new_src = str(data['source']).strip()
+            if new_src in ['off', 'stop', 'stop_camera']:
+                new_src = 'auto'
+                laptop_frame_buffer = None
+                laptop_last_seen = 0.0
+                car_frame_buffer = None
+                car_last_seen = 0.0
+                phone_frame_buffer = None
+                phone_last_seen = 0.0
+                release_all_hw_cameras()
+            elif new_src == 'auto' or new_src in PLAYLIST or str(new_src).endswith('.mp4') or any(k in new_src for k in ['fog', 'rain', 'night', 'glare', 'pothole', 'traffic']):
+                laptop_frame_buffer = None
+                laptop_last_seen = 0.0
+                car_frame_buffer = None
+                car_last_seen = 0.0
+                phone_frame_buffer = None
+                phone_last_seen = 0.0
+                release_all_hw_cameras()
+
             if new_src != current_source:
                 current_source = new_src
                 source_changed = True
@@ -1451,6 +1492,23 @@ def update_settings():
         "camera_rotation": camera_rotation,
         "camera_flip_h": camera_flip_h
     })
+
+
+@app.route('/api/stop_camera', methods=['POST', 'GET'])
+def stop_camera_endpoint():
+    """Explicit endpoint to immediately disengage all cameras, clear buffers, and release hardware sensors."""
+    global current_source, source_changed, laptop_frame_buffer, laptop_last_seen, car_frame_buffer, car_last_seen, phone_frame_buffer, phone_last_seen
+    with lock:
+        current_source = 'auto'
+        source_changed = True
+        laptop_frame_buffer = None
+        laptop_last_seen = 0.0
+        car_frame_buffer = None
+        car_last_seen = 0.0
+        phone_frame_buffer = None
+        phone_last_seen = 0.0
+    release_all_hw_cameras()
+    return jsonify({"status": "success", "message": "All cameras released and turned off", "source": "auto"})
 
 
 if __name__ == "__main__":
