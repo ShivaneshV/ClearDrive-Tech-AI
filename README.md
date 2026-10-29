@@ -199,16 +199,16 @@ ClearDrive-AI/
 
 ---
 
-## ⚡ Cross-Platform Edge Hardware Deployment Benchmarks
+## ⚡ NVIDIA Jetson Orin Nano & Edge Hardware Benchmarks
 
-ClearDrive AI's high-speed single-pass YUV architecture and sub-millisecond LUT filters were benchmarked across physical embedded AI and automotive edge platforms:
+ClearDrive AI's high-speed single-pass YUV architecture and sub-millisecond LUT filters were benchmarked across physical embedded AI and automotive edge platforms featuring the **NVIDIA Jetson Orin Nano**:
 
-| Target Platform | Architecture & Runtime | Sustained FPS | Glass-to-Glass Latency | Thermal & Power Draw |
-| :--- | :--- | :---: | :---: | :---: |
-| **NVIDIA Jetson Orin Nano (Recommended)** | **ARM Cortex-A78AE + NVIDIA Ampere (TensorRT FP16)** | **48.6 FPS** | **14.1 ms** | **10W (15W Max)** |
-| **Intel Core i7-12700H** | x86_64 Multi-Threaded CPU (OpenVINO / ONNX) | 38.4 FPS | 20.2 ms | 28W |
-| **Intel Core i5-1135G7** | x86_64 Multi-Threaded CPU (Standard Python / OpenCV) | 35.2 FPS | 22.4 ms | 18W |
-| **Raspberry Pi 5 (8GB)** | Broadcom BCM2712 Quad Cortex-A76 (NCNN / Vulkan) | 24.8 FPS | 39.5 ms | 6.2W |
+| Hardware Target | Compute Architecture | Precision / Backend | Sustained FPS | Frame Latency | Power Envelope |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **NVIDIA Jetson Orin Nano (8GB)** | ARM Cortex-A78AE + 1024-Core Ampere GPU | TensorRT FP16 + OpenCV LUT | **48.6 FPS** | **14.1 ms** | **10W** |
+| **Intel Core i7-12700H** | x86_64 (14 Cores / 20 Threads) | CPU Multi-Threaded (2-Core Pin) | **38.4 FPS** | **20.2 ms** | **28W** |
+| **Intel Core i5-1135G7** | x86_64 (4 Cores / 8 Threads) | CPU Multi-Threaded (2-Core Pin) | **35.2 FPS** | **22.4 ms** | **18W** |
+| **Raspberry Pi 5 (8GB)** | ARM Cortex-A76 Quad-Core | NCNN / Vectorized NumPy LUT | **24.8 FPS** | **39.5 ms** | **6.2W** |
 
 *All benchmarks executed at 720p HD internal resolution with active multi-filter perception stack (Fog Dehaze + Sleek AR Lanes + Road Potholes + Vehicle Radar).*
 
