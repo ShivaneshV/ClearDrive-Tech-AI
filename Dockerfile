@@ -23,6 +23,8 @@ RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/wh
 # Copy application code, models, and assets
 COPY . .
 
-EXPOSE 5000 7860
+# Set default port to 7860 for Hugging Face Spaces / Nebius Cloud container deployment
+ENV PORT=7860
+EXPOSE 7860
 
-CMD ["python", "-u", "app.py"]
+CMD ["python", "app.py"]

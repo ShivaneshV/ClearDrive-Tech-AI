@@ -1465,15 +1465,14 @@ if __name__ == "__main__":
 
         https_thread = threading.Thread(target=run_https, daemon=True)
         https_thread.start()
+    port = int(os.environ.get("PORT", 5000))
 
     print("\n" + "=" * 70)
     print("      🚗 CLEAR-DRIVE AI : NEXT-GEN PREDICTIVE V2X COCKPIT")
     print("=" * 70)
-    print(f"  [+] Cockpit UI:             http://localhost:5000")
-    print(f"  [+] Network Dashboard:      http://{local_ip}:5000")
+    print(f"  [+] Cockpit UI:             http://localhost:{port}")
+    print(f"  [+] Network Dashboard:      http://{local_ip}:{port}")
     print(f"  [+] Mobile Camera (HTTPS):  https://{local_ip}:5001/camera")
     print("=" * 70 + "\n")
 
-    # Dynamic Port Binding for Cloud Deployment (Hugging Face Spaces uses 7860, Render/local uses 5000)
-    server_port = int(os.environ.get('PORT', 7860 if 'SPACE_ID' in os.environ else 5000))
-    app.run(host='0.0.0.0', port=server_port, debug=False, threaded=True)
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
