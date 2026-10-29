@@ -1,0 +1,18 @@
+[project]
+name = "cleardrive-tech-ai"
+version = "1.0.0"
+description = "ClearDrive AI Next-Gen Predictive V2X Omni-Vision Edge Server"
+requires-python = ">=3.10"
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu" }
+]
+torchvision = [
+    { index = "pytorch-cpu" }
+]

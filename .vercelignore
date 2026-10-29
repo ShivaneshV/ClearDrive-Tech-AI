@@ -1,11 +1,8 @@
-# Ignore large video screen recordings and duplicates
+# Ignore all video recordings and demo dashcam clips for serverless deployment
+*.mp4
+*.mov
+*.mkv
 Screen Recording *.mp4
-fog.mp4
-rain.mp4
-night.mp4
-snow.mp4
-indian_fog.mp4
-rain_dashcam.mp4
 
 # Ignore compiled executables and binaries
 cloudflared.exe
@@ -14,8 +11,17 @@ cloudflared.exe
 # Ignore large documents and reports
 *.docx
 *.pdf
+ClearDrive_AI_50_Page_PBL_Report.pdf
 ClearDrive_AI_55_Page_PBL_Report.docx
+ClearDrive_AI_55_Page_PBL_Report.pdf
 ClearDrive_AI_Research_Paper.docx
+ClearDrive_Tech_100_Page_PBL_Report.pdf
+report_builder/
+report_builder_50/
+report_builder_55/
+report_builder_clean/
+build_*.py
+generate_*.py
 
 # Ignore test frame captures and redundant benchmark images
 test_*.jpg
@@ -40,6 +46,4 @@ env/
 venv/
 *.log
 tunnel_url.txt
-report_builder/
-report_builder_clean/
 scratch/
