@@ -9,7 +9,7 @@ echo.
 echo [+] Starting ClearDrive AI Python Engine on Port 5000...
 start /b python -u app.py
 timeout /t 3 /nobreak >nul
-echo [+] Connecting Cloudflare Edge Tunnel...
+echo [+] Connecting Cloudflare Edge Tunnel & Syncing Worker...
 echo.
-.\cloudflared.exe tunnel --url http://localhost:5000
-
+python launch_live_tunnel.py
+pause
