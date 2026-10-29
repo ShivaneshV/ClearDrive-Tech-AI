@@ -1,7 +1,8 @@
 import os
 import sys
+import traceback
 
-# Crucial AWS Lambda / Vercel Serverless environment fixes for Read-Only Filesystem
+# 1. AWS Lambda / Vercel Serverless environment fixes for Read-Only Filesystem
 os.environ["YOLO_CONFIG_DIR"] = "/tmp/Ultralytics"
 os.environ["ULTRALYTICS_CONFIG_DIR"] = "/tmp/Ultralytics"
 os.environ["MPLCONFIGDIR"] = "/tmp/matplotlib"
@@ -10,7 +11,7 @@ os.environ["HOME"] = "/tmp"
 os.environ["XDG_CONFIG_HOME"] = "/tmp"
 os.environ["XDG_CACHE_HOME"] = "/tmp"
 
-# Add project root directory to sys.path so app, engine, dehaze, etc. are importable
+# 2. Add project root directory to sys.path
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
@@ -20,7 +21,7 @@ try:
 except Exception:
     pass
 
-# Graceful fallback for optional media libraries in headless serverless environments
+# 3. Graceful fallback for optional media libraries in headless serverless environments
 try:
     import mediapipe
 except Exception:
@@ -30,22 +31,25 @@ except Exception:
     sys.modules['mediapipe.tasks.python'] = types.ModuleType('mediapipe.tasks.python')
     sys.modules['mediapipe.tasks.python.vision'] = types.ModuleType('mediapipe.tasks.python.vision')
 
-# Expose Flask WSGI application instance with diagnostic error boundary
+# 4. Attempt to load the primary ClearDrive Flask application
+app = None
+init_error_traceback = None
+
 try:
-    from app import app
-    # Explicitly wire templates and static assets relative to root directory
-    app.template_folder = os.path.join(ROOT_DIR, "templates")
-    app.static_folder = os.path.join(ROOT_DIR, "static")
-except Exception as _init_err:
-    import traceback
-    _init_tb = traceback.format_exc()
-    print(f"[ClearDrive Serverless Startup Error]:\n{_init_tb}")
-    from flask import Flask, make_response
-    app = Flask(__name__)
-    
-    @app.route("/", defaults={"path": ""})
-    @app.route("/<path:path>")
-    def _serverless_diagnostic(path):
+    from app import app as _flask_app
+    _flask_app.template_folder = os.path.join(ROOT_DIR, "templates")
+    _flask_app.static_folder = os.path.join(ROOT_DIR, "static")
+    app = _flask_app
+except Exception as _e:
+    init_error_traceback = traceback.format_exc()
+    print(f"[ClearDrive Serverless Startup Error]:\n{init_error_traceback}")
+
+# 5. Pure standard-library WSGI fallback boundary (Zero dependency - NEVER crashes)
+if app is None:
+    def fallback_wsgi(environ, start_response):
+        status = '200 OK'
+        headers = [('Content-type', 'text/html; charset=utf-8')]
+        start_response(status, headers)
         html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -64,11 +68,13 @@ except Exception as _init_err:
   <h1>🚗 ClearDrive AI : Omni-Vision Edge Platform</h1>
   <div class="badge">SERVERLESS COLD START DIAGNOSTIC</div>
   <p class="info">The serverless container encountered an initialization exception during module import:</p>
-  <pre>{_init_tb}</pre>
+  <pre>{init_error_traceback}</pre>
   <p class="info">
     💡 <strong>Hackathon Live Note:</strong> Hardware dashcam inputs (USB Port 1, Laptop Cam, Mobile Cam) require local DirectShow drivers. For full 30 FPS glass-to-glass demonstration with judges, launch <code>.\\Launch_Cloudflare_Live.bat</code>.
   </p>
   <div class="footer">ClearDrive AI · Powered by Nebius AI Studio & NVIDIA Nemotron</div>
 </body>
 </html>"""
-        return make_response(html, 200)
+        return [html.encode('utf-8')]
+    
+    app = fallback_wsgi
