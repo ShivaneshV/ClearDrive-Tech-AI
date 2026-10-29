@@ -1,0 +1,45 @@
+# Ignore large video screen recordings and duplicates
+Screen Recording *.mp4
+fog.mp4
+rain.mp4
+night.mp4
+snow.mp4
+indian_fog.mp4
+rain_dashcam.mp4
+
+# Ignore compiled executables and binaries
+cloudflared.exe
+*.exe
+
+# Ignore large documents and reports
+*.docx
+*.pdf
+ClearDrive_AI_55_Page_PBL_Report.docx
+ClearDrive_AI_Research_Paper.docx
+
+# Ignore test frame captures and redundant benchmark images
+test_*.jpg
+test_*.png
+verified_*.jpg
+verify_*.jpg
+thumb_*.jpg
+webcam_test_*.jpg
+vehicle_test.jpg
+traffic_*.jpg
+final_*.jpg
+
+# Ignore local caches and logs
+__pycache__/
+*.pyc
+*.pyo
+.git/
+.github/
+.gemini/
+.venv/
+env/
+venv/
+*.log
+tunnel_url.txt
+report_builder/
+report_builder_clean/
+scratch/
