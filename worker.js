@@ -14,22 +14,17 @@ export default {
           backend = text;
         }
       }
-    } catch (e) {
-      // Fall back to default backend URL
-    }
+    } catch (e) {}
 
     const url = new URL(request.url);
     const targetUrl = new URL(url.pathname + url.search, backend);
 
-    const newHeaders = new Headers(request.headers);
-    try {
-      newHeaders.set("Host", new URL(backend).host);
-      newHeaders.set("X-Forwarded-Host", url.host);
-    } catch (e) {}
+    const headers = new Headers(request.headers);
+    headers.delete("host");
 
     const reqInit = {
       method: request.method,
-      headers: newHeaders,
+      headers: headers,
       redirect: "follow"
     };
 
