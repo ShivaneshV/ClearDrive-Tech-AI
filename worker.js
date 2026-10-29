@@ -1,6 +1,6 @@
 export default {
   async fetch(request, env, ctx) {
-    let backend = env.BACKEND_URL || "https://headset-shorts-injured-spelling.trycloudflare.com";
+    let backend = env.BACKEND_URL || "https://conservation-beginning-opt-farm.trycloudflare.com";
 
     // 1. Dynamically read active live tunnel URL from GitHub
     try {
