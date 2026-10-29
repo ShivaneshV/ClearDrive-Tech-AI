@@ -40,6 +40,10 @@ export default {
 
     try {
       const response = await fetch(targetUrl.toString(), reqInit);
+      // Catch DNS errors (Cloudflare 530 / Error 1016) or offline backend gateways
+      if (response.status >= 500 || response.status === 530) {
+        throw new Error("Backend offline or tunnel expired");
+      }
       return response;
     } catch (err) {
       // Graceful Cockpit Standby Card if local live tunnel is currently paused
