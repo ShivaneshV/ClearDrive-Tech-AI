@@ -1,0 +1,46 @@
+{
+  "timestamp": "2026-10-29 11:21:05 UTC",
+  "environment": {
+    "nano_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+    "ultra_model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+    "endpoints": {
+      "nvidia_endpoint": "https://integrate.api.nvidia.com/v1",
+      "nebius_token_factory": "https://api.tokenfactory.nebius.com/v1/",
+      "tavily_endpoint": "https://api.tavily.com/search"
+    }
+  },
+  "verifications": {
+    "tavily_api": {
+      "status": "PASS",
+      "http_status": 200,
+      "top_url": "https://www.hindustantimes.com/india-news/rain-lashes-chennai-as-northeast-monsoon-gets-active-in-tamil-nadu-roads-flooded-traffic-snarls-watch-videos-101792307263092.html",
+      "top_title": "Rain lashes Chennai as northeast monsoon gets active in Tamil Nadu; roads flooded, traffic snarls | Visuals | India News"
+    },
+    "fast_reflex_tier": {
+      "status": "PASS",
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "completion_id": "chatcmpl-26128356-d778-47d9-8be9-b5c97220f8b3",
+      "latency_ms": 1333.4,
+      "tokens": 76,
+      "advisory": "Reduce speed to 40km/h. Maintain safe distance. Use fog lights."
+    },
+    "deep_causal_tier": {
+      "status": "PASS",
+      "tier_label": "Nemotron-3.5 Super-VL (Ultra)",
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "completion_id": "chatcmpl-280d9614-e65b-4ac3-a202-e986c51547ba",
+      "latency_ms": 8092.7,
+      "tokens": 662,
+      "reasoning_snippet": "The user is asking me to act as an automotive safety co-pilot in a critical hazard scenario. They provide:\n- TTC (Time to Collision) = 2.1 seconds\n- Approaching a stopped truck\n- C",
+      "content_snippet": "Emergency braking guidance issued."
+    },
+    "bridge_integration": {
+      "status": "PASS",
+      "routine_mode": "Nemotron-3.5 Lightning (Fast Reflex)",
+      "routine_req_id": "chatcmpl-6067c1a1-e398-40b3-ba12-a8e6f29372fe",
+      "critical_mode": "Nemotron-3.5 Super-VL (Thinking)",
+      "critical_req_id": "chatcmpl-facc0496-01e8-499d-ad13-424ef94a3c87",
+      "tavily_alert": "Live Hazard Watch: from rain, snow, and sleet; high and gusting winds; and low visibility conditions fro..."
+    }
+  }
+}

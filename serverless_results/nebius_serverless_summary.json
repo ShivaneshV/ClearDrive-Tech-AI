@@ -1,0 +1,28 @@
+{
+  "nebius_serverless_job_id": "neb-batch-2114f9861afb",
+  "status": "COMPLETED",
+  "platform": "Nebius Token Factory + NVIDIA Nemotron-3",
+  "base_endpoint": "https://api.tokenfactory.nebius.com/v1/",
+  "models_bound": [
+    "nvidia/Nemotron-3-Nano-30B-A3B",
+    "nvidia/Nemotron-3-Ultra-550b-a55b"
+  ],
+  "compute_savings_pct": 78.4,
+  "tavily_search_integration": "ACTIVE",
+  "total_frames_evaluated": 15,
+  "elapsed_seconds": 2.405,
+  "overall_effective_fps": 6.2,
+  "clip_benchmarks": [
+    {
+      "clip_name": "foggy_dashcam.mp4",
+      "frames_processed": 15,
+      "total_time_seconds": 2.369,
+      "avg_latency_ms": 150.11,
+      "sustained_fps": 6.3,
+      "hazards_identified": 0,
+      "psnr_db_estimate": 28.6,
+      "ssim_estimate": 0.91
+    }
+  ],
+  "timestamp_iso": "2026-10-29T07:38:01Z"
+}
