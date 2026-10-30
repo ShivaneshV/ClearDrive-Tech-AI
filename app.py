@@ -953,10 +953,10 @@ def process_video():
             int(cv2.IMWRITE_JPEG_OPTIMIZE), 0
         ])
 
-        # Precise 30 FPS frame pacing on cloud to prevent 0.1 CPU starvation
+        # Smooth 35-40 FPS frame pacing on cloud
         elapsed = time.time() - start_process
-        if is_cloud_env and not is_live_cam_source and elapsed < 0.033:
-            time.sleep(0.033 - elapsed)
+        if is_cloud_env and not is_live_cam_source and elapsed < 0.025:
+            time.sleep(0.025 - elapsed)
 
         # Update Live Telemetry & Notify Waiting Stream Clients
         with frame_condition:
@@ -1020,19 +1020,13 @@ def process_video():
 def generate_frames():
     """Generator yielding ultra-low-latency multipart JPEG frames with zero zombie threads."""
     global current_jpeg_bytes, latest_jpeg_bytes, frame_seq_id, frame_condition
-    global active_stream_generation_id, stream_generation_lock
-
-    with stream_generation_lock:
-        active_stream_generation_id += 1
-        my_stream_id = active_stream_generation_id
-
     last_seq = -1
 
-    # Send immediate warmup frame so HTTP 200 headers flush instantly to Cloudflare/browser
-    warmup_img = np.zeros((720, 1280, 3), dtype=np.uint8)
-    cv2.putText(warmup_img, "CLEAR-DRIVE AI // CONNECTING CAMERA FEED...", (80, 360),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.90, (0, 243, 255), 2, cv2.LINE_AA)
-    ret_w, buf_w = cv2.imencode('.jpg', warmup_img, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
+    # Send immediate lightweight warmup frame so HTTP 200 headers flush instantly
+    warmup_img = np.zeros((360, 640, 3), dtype=np.uint8)
+    cv2.putText(warmup_img, "CLEAR-DRIVE AI // CONNECTING CAMERA FEED...", (40, 180),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 243, 255), 2, cv2.LINE_AA)
+    ret_w, buf_w = cv2.imencode('.jpg', warmup_img, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
     if ret_w:
         wb = buf_w.tobytes()
         try:
@@ -1045,21 +1039,12 @@ def generate_frames():
 
     try:
         while True:
-            # Terminate zombie loop immediately if a newer stream connection was opened
-            if my_stream_id != active_stream_generation_id:
-                break
-
             with frame_condition:
                 while current_jpeg_bytes is None or frame_seq_id == last_seq:
-                    if not frame_condition.wait(timeout=0.045):
-                        break
-                    if my_stream_id != active_stream_generation_id:
+                    if not frame_condition.wait(timeout=0.035):
                         break
                 last_seq = frame_seq_id
                 bytes_to_stream = latest_jpeg_bytes or current_jpeg_bytes
-
-            if my_stream_id != active_stream_generation_id:
-                break
 
             if bytes_to_stream is None:
                 continue

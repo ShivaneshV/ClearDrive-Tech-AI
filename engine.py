@@ -185,14 +185,25 @@ class OmniVisionEngine:
                 continue
 
             try:
-                results = self.model(
-                    frame_to_process,
-                    classes=self.target_classes,
-                    conf=0.35,
-                    verbose=False,
-                    imgsz=320,
-                    device='cpu'
-                )[0]
+                if torch is not None and hasattr(torch, 'inference_mode'):
+                    with torch.inference_mode():
+                        results = self.model(
+                            frame_to_process,
+                            classes=self.target_classes,
+                            conf=0.35,
+                            verbose=False,
+                            imgsz=320,
+                            device='cpu'
+                        )[0]
+                else:
+                    results = self.model(
+                        frame_to_process,
+                        classes=self.target_classes,
+                        conf=0.35,
+                        verbose=False,
+                        imgsz=320,
+                        device='cpu'
+                    )[0]
 
                 h, w = frame_to_process.shape[:2]
                 frame_area = float(h * w)

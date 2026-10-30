@@ -2037,7 +2037,7 @@
                     <span id="floatingPillText">CAR DASH CAM</span>
                 </div>
 
-                <img id="videoStream" src="/api/live_frame.jpg" alt="Clear-Drive AI Camera Stream" onclick="handleVideoTap(event)" ondblclick="toggleFullscreen()" ontouchend="handleVideoTap(event)">
+                <img id="videoStream" src="/video_feed" alt="Clear-Drive AI Camera Stream" onclick="handleVideoTap(event)" ondblclick="toggleFullscreen()" ontouchend="handleVideoTap(event)">
 
                 <!-- FLOATING IN-VIDEO CAMERA ORIENTATION & LENS TOOLBAR (Always Visible Over Video) -->
                 <div class="stream-cam-overlay" id="streamCamOverlay">
@@ -3457,10 +3457,48 @@
         document.addEventListener('mozfullscreenchange', syncFullscreenState);
         document.addEventListener('MSFullscreenChange', syncFullscreenState);
 
-        // ------------------ ZERO-BACKLOG UNIVERSAL FRAME PUMP (<15ms Real-Time Sync) ------------------
-        let framePumpActive = true;
+        // ------------------ DUAL-ENGINE ADAPTIVE STREAM CONTROLLER ------------------
+        let streamMode = 'feed'; // 'feed' = continuous 30+ FPS MJPEG, 'pump' = high-frequency polling
+        let framePumpActive = false;
         let isPumpInFlight = false;
         window.pumpRunning = false;
+        let feedWatchdog = null;
+        let lastFrameTick = Date.now();
+
+        function initStreamEngine() {
+            const streamImg = document.getElementById('videoStream');
+            if (!streamImg) return;
+
+            // Connect native continuous MJPEG stream (/video_feed) for 30+ FPS zero-latency playback
+            streamMode = 'feed';
+            framePumpActive = false;
+            lastFrameTick = Date.now();
+
+            streamImg.onload = () => {
+                lastFrameTick = Date.now();
+            };
+            streamImg.onerror = () => {
+                switchToPumpMode();
+            };
+
+            if (!streamImg.src || streamImg.src.includes('live_frame')) {
+                streamImg.src = '/video_feed?t=' + Date.now();
+            }
+
+            if (feedWatchdog) clearInterval(feedWatchdog);
+            feedWatchdog = setInterval(() => {
+                if (streamMode === 'feed' && (Date.now() - lastFrameTick > 3500)) {
+                    switchToPumpMode();
+                }
+            }, 1000);
+        }
+
+        function switchToPumpMode() {
+            if (streamMode === 'pump') return;
+            streamMode = 'pump';
+            console.log('[ClearDrive] Switching to adaptive frame pump fallback');
+            startFramePump();
+        }
 
         function isLiveCameraSource(src) {
             if (!src) return false;
@@ -3489,7 +3527,7 @@
                         requestAnimationFrame(pumpLatestFrame);
                     }
                 }
-            }, 350);
+            }, 200);
 
             const onDone = () => {
                 if (pumpWatchdog) { clearTimeout(pumpWatchdog); pumpWatchdog = null; }
@@ -3509,7 +3547,7 @@
                 window.pumpRunning = false;
                 isPumpInFlight = false;
                 if (framePumpActive) {
-                    setTimeout(pumpLatestFrame, 35);
+                    setTimeout(pumpLatestFrame, 25);
                 }
             };
 
@@ -3526,18 +3564,23 @@
         }
 
         function stopFramePump() {
-            // Keep pump running as universal zero-latency transport
+            framePumpActive = false;
         }
 
         // Instant Buffer-Flush & Stream Resync (Restores 0ms real-time stream)
         function resyncStream() {
             const vStream = document.getElementById('videoStream');
             if (vStream) {
-                window.pumpRunning = false;
-                isPumpInFlight = false;
-                pumpLatestFrame();
-                showFloatingSourcePill('⚡', 'STREAM FLUSHED: 0ms Real-Time');
-                addTerminalLog('STREAM', '⚡ Video stream buffer flushed // Synced to live moment');
+                lastFrameTick = Date.now();
+                if (streamMode === 'feed') {
+                    vStream.src = '/video_feed?t=' + Date.now();
+                } else {
+                    window.pumpRunning = false;
+                    isPumpInFlight = false;
+                    pumpLatestFrame();
+                }
+                showFloatingSourcePill('⚡', 'STREAM RESYNCED: 0ms Real-Time');
+                addTerminalLog('STREAM', '⚡ Video stream synchronized // 0ms delay');
             }
         }
 
@@ -3553,9 +3596,9 @@
             }
         }
 
-        // Automatic initialization on load: start the zero-backlog pump immediately
+        // Automatic initialization on load: start the continuous stream engine immediately
         window.addEventListener('DOMContentLoaded', () => {
-            startFramePump();
+            initStreamEngine();
         });
 
         // ------------------ COCKPIT VIEWPORT LAYOUT SWITCHER ------------------
