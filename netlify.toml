@@ -1,7 +1,0 @@
-[build]
-  publish = "hf_static_deploy"
-
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Access-Control-Allow-Origin = "*"
