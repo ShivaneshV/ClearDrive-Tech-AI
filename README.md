@@ -15,7 +15,11 @@ pinned: false
 [![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-orange.svg)](https://github.com/ultralytics/ultralytics)
 [![Flask](https://img.shields.io/badge/Flask-3.0+-black.svg)](https://flask.palletsprojects.com/)
 [![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
+[![Google Cloud Run](https://img.shields.io/badge/Google%20Cloud%20Run-Live%20Demo-4285F4?logo=googlecloud&logoColor=white)](https://cleardriveai-781048859316.asia-south1.run.app/)
 
+> 🌐 **Live Cloud Cockpit (Google Cloud Run):** [https://cleardriveai-781048859316.asia-south1.run.app/](https://cleardriveai-781048859316.asia-south1.run.app/)  
+> ⚡ **Netlify Static Canvas Engine:** [https://cleardriveai.netlify.app](https://cleardriveai.netlify.app)
+> 
 > **ClearDrive AI** is a production-grade, 100% offline-resilient Automotive ADAS Cockpit Operating System. It combines computer vision perception, multi-sensor concurrency, live hardware GPS telemetry, condition-aware speed limits, and in-cockpit Google Maps navigation to prevent vehicular collisions in extreme weather and zero-light conditions.
 
 ---
@@ -115,8 +119,10 @@ python app.py
 ```
 
 ### 4. Access the Dashboard
-* **Cockpit Interface:** Open [`http://localhost:5000`](http://localhost:5000) in your browser.
-* **Mobile Wireless Dashcam Node:** Open [`https://<YOUR-LOCAL-IP>:5001/camera`](https://localhost:5001/camera) on your phone.
+* **🌐 Live Cloud Deployment (Google Cloud Run):** [`https://cleardriveai-781048859316.asia-south1.run.app/`](https://cleardriveai-781048859316.asia-south1.run.app/)
+* **⚡ Standalone Static Demo (Netlify):** [`https://cleardriveai.netlify.app`](https://cleardriveai.netlify.app)
+* **💻 Local Cockpit Interface:** Open [`http://localhost:5000`](http://localhost:5000) in your browser.
+* **📱 Mobile Wireless Dashcam Node:** Open [`https://<YOUR-LOCAL-IP>:5001/camera`](https://localhost:5001/camera) on your phone.
 
 ---
 
